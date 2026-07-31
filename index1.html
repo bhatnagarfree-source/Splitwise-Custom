@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F1ECE0; --paper-line:#E4DCC9; --ink:#2A2A22; --ink-soft:#6B6858;
+    --rust:#B5583E; --green:#4C6B4F; --line:#C9C2B0; --card:#FBF9F3;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; background:var(--paper);
+    background-image: repeating-linear-gradient(180deg, transparent, transparent 27px, var(--paper-line) 28px);
+    font-family:'Inter', system-ui, sans-serif; color:var(--ink);
+    padding:32px 16px 60px; display:flex; justify-content:center;
+  }
+  .container{ width:100%; max-width:520px; }
+  .eyebrow{ font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.18em; color:var(--ink-soft); margin-bottom:6px; }
+  .title-row{ display:flex; align-items:center; justify-content:space-between; }
+  h1{ font-family:'Fraunces', serif; font-weight:500; font-size:28px; margin:0; display:flex; align-items:center; gap:8px;}
+  h1 .arrow{ color:var(--rust); }
+  .link-btn{ background:none; border:none; color:var(--ink-soft); font-size:12px; font-family:'JetBrains Mono', monospace; cursor:pointer; text-decoration:underline; padding:4px;}
+  .name-edit-row{ display:flex; gap:8px; align-items:center; }
+  .name-edit-row input{ font-family:'Fraunces', serif; font-size:18px; padding:6px 10px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--ink); flex:1; min-width:0;}
+  .save-btn{ background:var(--ink); color:var(--card); border:none; border-radius:6px; padding:8px 14px; font-size:12px; font-family:'JetBrains Mono', monospace; cursor:pointer;}
+  .error{ background:#F3D9D2; color:#7A2E1C; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px; }
+  .beam-card{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:22px 20px 18px; margin:20px 0 22px; }
+  .beam-labels{ display:flex; justify-content:space-between; font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--ink-soft); margin-bottom:10px;}
+  .beam-track{ position:relative; height:6px; background:var(--line); border-radius:3px; margin-bottom:14px;}
+  .beam-mid{ position:absolute; left:50%; top:-4px; width:1px; height:14px; background:var(--line); transform:translateX(-50%);}
+  .beam-fill{ position:absolute; top:0; height:6px; border-radius:3px; transition:all .3s ease;}
+  .beam-dot{ position:absolute; top:-5px; width:16px; height:16px; border-radius:50%; transform:translateX(-50%); border:2px solid #FBF9F3; transition:all .3s ease;}
+  .beam-result{ display:flex; align-items:baseline; justify-content:center; gap:8px; font-family:'Fraunces', serif; font-size:18px; }
+  .beam-amount{ font-family:'JetBrains Mono', monospace; font-size:18px; font-weight:600; }
+  form{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:24px; display:flex; flex-direction:column; gap:10px; }
+  .form-row{ display:flex; gap:10px; }
+  input, select{ font-family:'Inter', sans-serif; font-size:14px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink); min-width:0; width:100%;}
+  .split-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .split-pill{ font-family:'JetBrains Mono', monospace; font-size:11px; padding:7px 10px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--ink-soft); cursor:pointer;}
+  .split-pill.active{ background:var(--ink); color:var(--card); border-color:var(--ink); }
+  .pct-row{ display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:13px; }
+  .pct-row input{ width:64px; padding:6px 8px; text-align:center; }
+  .pct-name{ font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .add-btn{ margin-top:4px; display:flex; align-items:center; justify-content:center; gap:6px; background:var(--rust); color:#fff; border:none; border-radius:8px; padding:11px 0; font-size:14px; font-weight:600; cursor:pointer; font-family:'Inter', sans-serif;}
+  .add-btn:disabled{ opacity:.6; cursor:not-allowed; }
+  .list-header{ display:flex; justify-content:space-between; font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.1em; color:var(--ink-soft); margin-bottom:10px; padding:0 4px;}
+  .empty{ text-align:center; color:var(--ink-soft); font-size:14px; padding:30px 0; font-family:'Fraunces', serif; }
+  ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+  li{ background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;}
+  .item-desc{ font-family:'Fraunces', serif; font-size:15px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:260px;}
+  .item-meta{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--ink-soft); }
+  .item-right{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
+  .item-amount{ font-family:'JetBrains Mono', monospace; font-size:14px; font-weight:600; }
+  .delete-btn{ background:none; border:none; color:var(--ink-soft); cursor:pointer; padding:4px; font-size:16px; }
+  .footnote{ margin-top:24px; text-align:center; font-size:11px; color:var(--ink-soft); font-family:'JetBrains Mono', monospace; }
+  .loading{ font-family:'Fraunces', serif; font-size:18px; color:var(--ink-soft); margin-top:80px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="eyebrow">SHARED LEDGER</div>
+  <div id="header"></div>
+  <div id="error"></div>
+  <div id="app" style="display:none;">
+    <div class="beam-card" id="beamCard"></div>
+
+    <form id="expenseForm">
+      <div class="form-row">
+        <input id="descInput" placeholder="What was it for?" />
+        <input id="amountInput" placeholder="0.00" inputmode="decimal" style="max-width:110px;" />
+      </div>
+      <div class="form-row">
+        <input id="dateInput" type="date" />
+        <select id="paidBySelect"></select>
+      </div>
+      <div class="split-row" id="splitRow"></div>
+      <div id="pctRowContainer"></div>
+      <button type="submit" class="add-btn" id="addBtn">+ Add expense</button>
+    </form>
+
+    <div class="list-header">
+      <span>ENTRIES</span>
+      <span id="totalLabel">TOTAL ₹0.00</span>
+    </div>
+    <div id="listContainer"></div>
+
+    <div class="footnote">Backed by your Google Sheet — anyone with this page's link and the sheet shared can add or view entries.</div>
+  </div>
+  <div class="loading" id="loadingMsg">Opening the ledger…</div>
+</div>
+
+<script>
+/* ====== SET THIS to your Apps Script Web App URL ====== */
+const API_URL = "https://script.google.com/macros/s/AKfycbwTBrwlKBorJOf2TP4bfh-BXDNysY2a5Mg32Ev2lhqiCuZAxQaiFGLExmLlp-3ggaC-4A/exec";
+/* ======================================================= */
+
+const CURRENCY = "₹";
+let names = ["You", "Them"];
+let expenses = [];
+let splitType = "equal";
+let customPct = 50; // percentage belonging to names[0] when splitType === "custom"
+
+const el = (id) => document.getElementById(id);
+
+// Given a splitType string and total amount, returns { shareA, shareB }
+// splitType can be: "equal", "full0", "full1", or "custom:<pctForA>"
+function computeShares(type, amount) {
+  if (type === "equal") return { shareA: amount / 2, shareB: amount / 2 };
+  if (type === "full0") return { shareA: amount, shareB: 0 };
+  if (type === "full1") return { shareA: 0, shareB: amount };
+  if (typeof type === "string" && type.startsWith("custom:")) {
+    const pctA = parseFloat(type.split(":")[1]);
+    const pct = isNaN(pctA) ? 50 : Math.min(100, Math.max(0, pctA));
+    const shareA = amount * (pct / 100);
+    return { shareA, shareB: amount - shareA };
+  }
+  return { shareA: amount / 2, shareB: amount / 2 };
+}
+
+async function apiGet() {
+  const res = await fetch(API_URL, { method: "GET" });
+  if (!res.ok) throw new Error("Failed to load");
+  return res.json();
+}
+
+async function apiPost(payload) {
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error("Failed to save");
+  return res.json();
+}
+
+function showError(msg) {
+  el("error").innerHTML = `<div class="error">${msg}</div>`;
+}
+
+function renderHeader() {
+  el("header").innerHTML = `
+    <div class="title-row" id="titleRow">
+      <h1>${names[0]} <span class="arrow">⇄</span> ${names[1]}</h1>
+      <button class="link-btn" id="renameBtn">rename</button>
+    </div>`;
+  el("renameBtn").onclick = renderNameEditor;
+}
+
+function renderNameEditor() {
+  el("header").innerHTML = `
+    <div class="name-edit-row">
+      <input id="nameA" value="${names[0]}" />
+      <input id="nameB" value="${names[1]}" />
+      <button class="save-btn" id="saveNamesBtn">save</button>
+    </div>`;
+  el("saveNamesBtn").onclick = async () => {
+    const a = el("nameA").value.trim() || "You";
+    const b = el("nameB").value.trim() || "Them";
+    names = [a, b];
+    renderHeader();
+    renderAll();
+    try { await apiPost({ action: "setNames", names }); }
+    catch (e) { showError("Couldn't save names. Try again."); }
+  };
+}
+
+function computeBalance() {
+  let net = 0;
+  for (const e of expenses) {
+    if (e.paidBy === 0) net += e.shareB;
+    else net -= e.shareA;
+  }
+  return net;
+}
+
+function renderBeam() {
+  const balance = computeBalance();
+  const settled = Math.abs(balance) < 0.005;
+  const leanRight = balance > 0.005;
+  const owesAmount = Math.abs(balance);
+  const tiltPct = settled ? 50 : Math.max(12, Math.min(88, 50 + (leanRight ? 1 : -1) * Math.min(38, 8 + owesAmount / 5)));
+  const owesText = settled ? "" : leanRight ? `${names[1]} owes ${names[0]}` : `${names[0]} owes ${names[1]}`;
+  const color = settled ? "var(--ink)" : leanRight ? "var(--green)" : "var(--rust)";
+
+  el("beamCard").innerHTML = `
+    <div class="beam-labels">
+      <span style="font-weight:${!leanRight && !settled ? 600 : 500}">${names[0]}</span>
+      <span style="font-weight:${leanRight && !settled ? 600 : 500}">${names[1]}</span>
+    </div>
+    <div class="beam-track">
+      <div class="beam-mid"></div>
+      <div class="beam-fill" style="left:${settled ? '50%' : leanRight ? '50%' : tiltPct + '%'}; width:${settled ? '2px' : Math.abs(tiltPct - 50) + '%'}; background:${color};"></div>
+      <div class="beam-dot" style="left:${tiltPct}%; background:${color};"></div>
+    </div>
+    <div class="beam-result">
+      ${settled
+        ? `<span style="color:var(--ink-soft);">✓ All settled up</span>`
+        : `<span style="color:${color}; font-weight:600;">${owesText}</span><span class="beam-amount">${CURRENCY}${owesAmount.toFixed(2)}</span>`
+      }
+    </div>`;
+}
+
+function renderForm() {
+  el("paidBySelect").innerHTML = `
+    <option value="0">${names[0]} paid</option>
+    <option value="1">${names[1]} paid</option>`;
+  const opts = [
+    { key: "equal", label: "Split equally" },
+    { key: "full0", label: `${names[0]} owes it all` },
+    { key: "full1", label: `${names[1]} owes it all` },
+    { key: "custom", label: "Custom %" }
+  ];
+  const activeKey = splitType.startsWith("custom") ? "custom" : splitType;
+  el("splitRow").innerHTML = opts.map(o =>
+    `<button type="button" class="split-pill ${activeKey === o.key ? 'active' : ''}" data-key="${o.key}">${o.label}</button>`
+  ).join("");
+  el("splitRow").querySelectorAll(".split-pill").forEach(btn => {
+    btn.onclick = () => {
+      splitType = btn.dataset.key === "custom" ? `custom:${customPct}` : btn.dataset.key;
+      renderForm();
+    };
+  });
+
+  if (activeKey === "custom") {
+    el("pctRowContainer").innerHTML = `
+      <div class="pct-row">
+        <span class="pct-name">${names[0]}</span>
+        <input id="pctInputA" type="number" min="0" max="100" step="1" value="${customPct}" />
+        <span>%</span>
+        <span style="color:var(--ink-soft);">/</span>
+        <input id="pctInputB" type="number" min="0" max="100" step="1" value="${100 - customPct}" />
+        <span>%</span>
+        <span class="pct-name">${names[1]}</span>
+      </div>`;
+    const pctA = el("pctInputA");
+    const pctB = el("pctInputB");
+    pctA.oninput = () => {
+      let v = Math.min(100, Math.max(0, Number(pctA.value) || 0));
+      customPct = v;
+      pctB.value = 100 - v;
+      splitType = `custom:${customPct}`;
+    };
+    pctB.oninput = () => {
+      let v = Math.min(100, Math.max(0, Number(pctB.value) || 0));
+      customPct = 100 - v;
+      pctA.value = customPct;
+      splitType = `custom:${customPct}`;
+    };
+  } else {
+    el("pctRowContainer").innerHTML = "";
+  }
+
+  if (!el("dateInput").value) el("dateInput").value = new Date().toISOString().slice(0, 10);
+}
+
+function renderList() {
+  const total = expenses.reduce((s, e) => s + e.amount, 0);
+  el("totalLabel").textContent = `TOTAL ${CURRENCY}${total.toFixed(2)}`;
+
+  if (expenses.length === 0) {
+    el("listContainer").innerHTML = `<div class="empty">No expenses yet. Add the first one above.</div>`;
+    return;
+  }
+  const sorted = [...expenses].sort((a, b) => (a.date < b.date ? 1 : -1));
+  el("listContainer").innerHTML = `<ul>${sorted.map(e => {
+    let splitLabel;
+    if (typeof e.splitType === "string" && e.splitType.startsWith("custom:")) {
+      const pctA = Math.round(parseFloat(e.splitType.split(":")[1]));
+      splitLabel = `${names[0]} ${pctA}% / ${names[1]} ${100 - pctA}%`;
+    } else if (e.shareA === e.amount) {
+      splitLabel = `${names[0]} owes full`;
+    } else if (e.shareB === e.amount) {
+      splitLabel = `${names[1]} owes full`;
+    } else {
+      splitLabel = "split equally";
+    }
+    return `
+      <li>
+        <div>
+          <div class="item-desc">${escapeHtml(e.desc)}</div>
+          <div class="item-meta">${e.date} · ${names[e.paidBy]} paid · ${splitLabel}</div>
+        </div>
+        <div class="item-right">
+          <span class="item-amount">${CURRENCY}${e.amount.toFixed(2)}</span>
+          <button class="delete-btn" data-id="${e.id}">✕</button>
+        </div>
+      </li>`;
+  }).join("")}</ul>`;
+
+  el("listContainer").querySelectorAll(".delete-btn").forEach(btn => {
+    btn.onclick = () => removeExpense(btn.dataset.id);
+  });
+}
+
+function escapeHtml(str) {
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function renderAll() {
+  renderBeam();
+  renderForm();
+  renderList();
+}
+
+async function removeExpense(id) {
+  expenses = expenses.filter(e => e.id !== id);
+  renderAll();
+  try { await apiPost({ action: "delete", id }); }
+  catch (e) { showError("Couldn't delete. Refresh and try again."); }
+}
+
+el("expenseForm").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const desc = el("descInput").value.trim();
+  const amt = parseFloat(el("amountInput").value);
+  const date = el("dateInput").value;
+  const paidBy = Number(el("paidBySelect").value);
+  if (!desc || !amt || amt <= 0) return;
+
+  const { shareA, shareB } = computeShares(splitType, amt);
+
+  const entry = { id: String(Date.now()) + Math.random().toString(36).slice(2, 6), date, desc, amount: amt, paidBy, splitType, shareA, shareB };
+  expenses.unshift(entry);
+  splitType = "equal";
+  customPct = 50;
+  renderAll();
+  el("descInput").value = "";
+  el("amountInput").value = "";
+
+  const addBtn = el("addBtn");
+  addBtn.disabled = true;
+  try {
+    await apiPost({ action: "add", id: entry.id, date, desc, amount: amt, paidBy, splitType });
+  } catch (e) {
+    showError("Couldn't save that expense. Check your connection and try again.");
+  } finally {
+    addBtn.disabled = false;
+  }
+});
+
+async function init() {
+  if (API_URL.includes("PASTE_YOUR")) {
+    el("loadingMsg").textContent = "";
+    showError("Setup needed: paste your Apps Script Web App URL into API_URL near the top of index.html.");
+    return;
+  }
+  try {
+    const data = await apiGet();
+    names = data.names && data.names.length === 2 ? data.names : names;
+    expenses = (data.expenses || []).map(e => {
+      const { shareA, shareB } = computeShares(e.splitType, e.amount);
+      return { ...e, shareA, shareB };
+    });
+    renderHeader();
+    renderAll();
+    el("loadingMsg").style.display = "none";
+    el("app").style.display = "block";
+  } catch (e) {
+    el("loadingMsg").textContent = "";
+    showError("Couldn't load the ledger. Check the API_URL and that the Apps Script is deployed with 'Anyone' access.");
+  }
+}
+
+init();
+</script>
+</body>
+</html>
