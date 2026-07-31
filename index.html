@@ -287,13 +287,13 @@ function renderList() {
         </div>
         <div class="item-right">
           <span class="item-amount">${CURRENCY}${e.amount.toFixed(2)}</span>
-          <button class="delete-btn" data-id="${e.id}">✕</button>
+          <button class="delete-btn" data-id="${e.id}" data-desc="${escapeHtml(e.desc)}" data-amount="${e.amount}">✕</button>
         </div>
       </li>`;
   }).join("")}</ul>`;
 
   el("listContainer").querySelectorAll(".delete-btn").forEach(btn => {
-    btn.onclick = () => removeExpense(btn.dataset.id);
+    btn.onclick = () => removeExpense(btn.dataset.id, btn.dataset.desc, Number(btn.dataset.amount));
   });
 }
 
@@ -309,7 +309,9 @@ function renderAll() {
   renderList();
 }
 
-async function removeExpense(id) {
+async function removeExpense(id, desc, amount) {
+  const ok = window.confirm(`Delete "${desc}" (${CURRENCY}${amount.toFixed(2)})? This can't be undone.`);
+  if (!ok) return;
   expenses = expenses.filter(e => e.id !== id);
   renderAll();
   try { await apiPost({ action: "delete", id }); }
